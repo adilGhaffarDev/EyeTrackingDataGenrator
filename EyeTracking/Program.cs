@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
 using System.Threading;
 
 namespace EyeTracking
@@ -31,6 +33,11 @@ namespace EyeTracking
         public float XCord { get => xCord; set => xCord = value; }
         public float YCord { get => yCord; set => yCord = value; }
         public string TimeStamp { get => timeStamp; set => timeStamp = value; }
+
+        public string getCordinatesInStringFormat()
+        {
+            return xCord.ToString()+","+ yCord.ToString();
+        }
     }
 
     enum GazeMovementState
@@ -143,6 +150,22 @@ namespace EyeTracking
 
             stopWatch.Stop();
 
+            // write to file
+            var csv = new StringBuilder();
+            var first = "XCordinate,YCordinate";
+            var second = "Timestamp";
+
+            var newLine = string.Format("{0},{1}", first, second);
+            csv.AppendLine(newLine);
+            foreach (DataPoint d in dataPoints)
+            {
+                first = d.getCordinatesInStringFormat();
+                second = d.TimeStamp;
+
+                newLine = string.Format("{0},{1}", first, second);
+                csv.AppendLine(newLine);
+                File.WriteAllText(fileName, csv.ToString());
+            }
             return fileName;
         }
 
@@ -242,13 +265,17 @@ namespace EyeTracking
          
         }
 
-        private static readonly Random getrandom = new Random();
+       
 
+
+        /// <summary>
+        /// Util Funtions
+        /// </summary>
+        private static readonly Random getrandom = new Random();
         public static int GetRandomNumber(int min, int max)
         {
             return getrandom.Next(min, max);
         }
-
         public double GetRandomNumberFloat(double minimum, double maximum)
         {
             return getrandom.NextDouble() * (maximum - minimum) + minimum;
