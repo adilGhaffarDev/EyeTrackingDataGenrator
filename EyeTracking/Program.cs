@@ -8,7 +8,7 @@ namespace EyeTracking
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            //Console.WriteLine("Hello World!");
             Generator SampleDataGenerator = new Generator(3,100,250,300,500,50,1024,768,60,53.34f);
             SampleDataGenerator.GenerateSampleData();
         }
@@ -78,6 +78,7 @@ namespace EyeTracking
         float maxDegreeForFixation;
 
         float ContinousFixationTime;
+        float ContinousSaccadeTime;
 
         int totalDataPoints;
 
@@ -103,6 +104,7 @@ namespace EyeTracking
             degPerPixel = RadianToDegree(MathF.Atan2(0.5f * disaplaySize, distPartcipantScreen)) / (0.5f * resY);
             currentState = GazeMovementState.none;
             ContinousFixationTime = 0;
+            ContinousSaccadeTime = 0;
             minDegreeForFixation = 1;
             maxDegreeForFixation = 5;
 
@@ -114,11 +116,13 @@ namespace EyeTracking
         }
 
         int currentDataIndex = 0;
+        Stopwatch stopWatch = new Stopwatch();
 
         public string GenerateSampleData()
         {
             string fileName = "SampleData.csv";
             dataPoints = new DataPoint[totalDataPoints];
+            stopWatch.Start();
             SwitchState();
             for (currentDataIndex = 0; currentDataIndex < totalDataPoints; currentDataIndex++)
             {
@@ -130,12 +134,14 @@ namespace EyeTracking
                 else
                 {
                     GenerateSaccadePoint();
+                    ContinousSaccadeTime += (duration * 1000) / totalDataPoints;
                 }
 
                 SwitchState();
                 Thread.Sleep((int)((1.0f/ tempoaralRes) *1000.0f));
             }
 
+            stopWatch.Stop();
 
             return fileName;
         }
@@ -149,14 +155,27 @@ namespace EyeTracking
         {
             if(currentDataIndex == 0)
             {
-                dataPoints[currentDataIndex] = new DataPoint(0,0,System.DateTime.Now.ToLongTimeString());
+                dataPoints[currentDataIndex] = new DataPoint(0,0, stopWatch.Elapsed.TotalMilliseconds.ToString());
+                Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
+
             }
             else
             {
                 DataPoint prevPoint = dataPoints[currentDataIndex-1];
                 var ranX = GetRandomNumberFloat(minFixationPix,maxFixationPix);
                 var ranY = GetRandomNumberFloat(minFixationPix, maxFixationPix);
-                dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, System.DateTime.Now.ToLongTimeString());
+                var xcord = prevPoint.XCord + (float)ranX;
+                var ycord = prevPoint.YCord + (float)ranY;
+                if(xcord >= resX)
+                {
+                    xcord = 0;
+                }
+                if (ycord >= resY)
+                {
+                    ycord = 0;
+                }
+
+                dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
                 Console.Write("xcord: "+ dataPoints[currentDataIndex].XCord+"  "+ "ycord: " + dataPoints[currentDataIndex].YCord+"  "+ "Time: "+ dataPoints[currentDataIndex].TimeStamp + "\n");
             }
         }
@@ -165,20 +184,32 @@ namespace EyeTracking
         {
             if (currentDataIndex == 0)
             {
-                dataPoints[currentDataIndex] = new DataPoint(-1, -1, System.DateTime.Now.ToLongTimeString());
+                dataPoints[currentDataIndex] = new DataPoint(0, 0, stopWatch.Elapsed.TotalMilliseconds.ToString());
                 Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
 
             }
             else
             {
-                dataPoints[currentDataIndex] = new DataPoint(-1, -1, System.DateTime.Now.ToLongTimeString());
+                DataPoint prevPoint = dataPoints[currentDataIndex - 1];
+
+                float minSaccadePix = ((1 / degPerPixel) * saccadeMin) / totalDataPoints;
+                float maxSaccadePix = ((1 / degPerPixel) * saccadeMax) / totalDataPoints;
+
+                var ranX = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
+                var ranY = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
+
+                var xcord = prevPoint.XCord + (float)ranX;
+                var ycord = prevPoint.YCord + (float)ranY;
+                if (xcord >= resX)
+                {
+                    ranX = 0;
+                }
+                if (ycord >= resY)
+                {
+                    ranY = 0;
+                }
+                dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
                 Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp+"\n");
-
-
-                //DataPoint prevPoint = dataPoints[currentDataIndex - 1];
-                //var ranX = GetRandomNumberFloat(minFixationPix, maxFixationPix);
-                //var ranY = GetRandomNumberFloat(minFixationPix, maxFixationPix);
-                //dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, System.DateTime.Now.ToLongTimeString());
             }
         }
 
@@ -189,11 +220,11 @@ namespace EyeTracking
                 currentState = GazeMovementState.fast;
                 ContinousFixationTime = 0;
             }
-            else if(ContinousFixationTime < fixationMin)
+            else if(ContinousFixationTime < fixationMin && ContinousSaccadeTime == 0)
             {
                 currentState = GazeMovementState.slow;
             }
-            else
+            else if(ContinousSaccadeTime > 0 && ContinousSaccadeTime < 90)
             {
                 float r = GetRandomNumber(0,100);
                 if(r < 50)
@@ -201,7 +232,14 @@ namespace EyeTracking
                     currentState = GazeMovementState.fast;
                     ContinousFixationTime = 0;
                 }
+                else
+                {
+                    currentState = GazeMovementState.slow;
+                    ContinousFixationTime = 0;
+                    ContinousSaccadeTime = 0;
+                }
             }
+         
         }
 
         private static readonly Random getrandom = new Random();
