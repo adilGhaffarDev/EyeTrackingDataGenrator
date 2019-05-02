@@ -10,13 +10,30 @@ namespace EyeTracking
     {
         static void Main(string[] args)
         {
-            //Console.WriteLine("Hello World!");
+            // Create Generator with following parameters
+            //duration of tracking
+            // minimum fixation time
+            // maximum fixation time
+            // minimum saccade angle
+            // maximum saccade angle
+            // Rate/ frequancy 
+            // screen resolution horizontal in pixels
+            // screen resolution vertical in pixels
+            // distance between participant and screen
+            // display size in cm
             Generator SampleDataGenerator = new Generator(3,100,250,300,500,50,1024,768,60,53.34f);
-            SampleDataGenerator.GenerateSampleData();
+            string filename = SampleDataGenerator.GenerateSampleData();// this will generate csv
+            Console.Write("File: "+ filename+" created.");
         }
-
     }
 
+    /// <summary>
+    /// Each entry in csv file is a represented as DataPoint
+    /// with properties:
+    /// X cordinate (x position on screen)
+    /// Y cordinate (Y position on screen)
+    /// TimeStamp (time at which the point was recorded)
+    /// </summary>
     class DataPoint
     {
         float xCord;
@@ -34,29 +51,29 @@ namespace EyeTracking
         public float YCord { get => yCord; set => yCord = value; }
         public string TimeStamp { get => timeStamp; set => timeStamp = value; }
 
+        // returns the formatted string of cordinates to show in csv file
         public string getCordinatesInStringFormat()
         {
             return xCord.ToString()+","+ yCord.ToString();
         }
     }
 
+    /// <summary>
+    /// GazeMovementState is a state that switches from slow to fast suring the transition
+    /// of fixation to saccade and fast to slow when transition from saccade to fixation.
+    /// </summary>
     enum GazeMovementState
     {
-        slow,
-        fast,
+        slow, // fixation state
+        fast, // saccade state
         none
     }
 
+    /// <summary>
+    /// Generator generates csv sample data on the basis of giveb parameters
+    /// </summary>
     class Generator
     {
-        //Parameters: 
-        //fixation duration min and max, 
-        //saccade duration min and max and 
-        //velocity min and max, 
-        //temporal resolution(in Hz), 
-        //X&Y- resolution in pixes, 
-        //distance of the participant to the screen(in cm), 
-        //and display size in cm.
         float duration;
 
         float fixationMin;
@@ -108,7 +125,7 @@ namespace EyeTracking
             this.distPartcipantScreen = distPartcipantScreen;
             this.disaplaySize = disaplaySize;
 
-            degPerPixel = RadianToDegree(MathF.Atan2(0.5f * disaplaySize, distPartcipantScreen)) / (0.5f * resY);
+            degPerPixel = RadianToDegree(MathF.Atan2(0.5f * disaplaySize, distPartcipantScreen)) / (0.5f * resY);// degree per pixel calculation
             currentState = GazeMovementState.none;
             ContinousFixationTime = 0;
             ContinousSaccadeTime = 0;
@@ -117,8 +134,8 @@ namespace EyeTracking
 
             totalDataPoints = (int)(duration * tempoaralRes);
 
-            minFixationPix = ((1 / degPerPixel) * minDegreeForFixation) / totalDataPoints;
-            maxFixationPix = ((1 / degPerPixel) * maxDegreeForFixation) / totalDataPoints;
+            minFixationPix = ((1 / degPerPixel) * minDegreeForFixation) / totalDataPoints;// min distance that can be covered in pixels during fixation 
+            maxFixationPix = ((1 / degPerPixel) * maxDegreeForFixation) / totalDataPoints;// max distance that can be covered in pixels during fixation
 
         }
 
@@ -131,6 +148,7 @@ namespace EyeTracking
             dataPoints = new DataPoint[totalDataPoints];
             stopWatch.Start();
             SwitchState();
+            // generating data points 
             for (currentDataIndex = 0; currentDataIndex < totalDataPoints; currentDataIndex++)
             {
                 if(currentState == GazeMovementState.slow)
@@ -138,22 +156,22 @@ namespace EyeTracking
                     GenerateFixationPoint();
                     ContinousFixationTime += (duration*1000) / totalDataPoints;
                 }
-                else
+                else// currentState == GazeMovementState.fast
                 {
                     GenerateSaccadePoint();
                     ContinousSaccadeTime += (duration * 1000) / totalDataPoints;
                 }
 
                 SwitchState();
-                Thread.Sleep((int)((1.0f/ tempoaralRes) *1000.0f));
+                Thread.Sleep((int)((1.0f/ tempoaralRes) *1000.0f)); // wait for (1/50)*1000 = 20 ms before transition of state
             }
 
             stopWatch.Stop();
 
-            // write to file
+            // write data to csv file
             var csv = new StringBuilder();
-            var first = "XCordinate,YCordinate";
-            var second = "Timestamp";
+            var first = "XCordinate,YCordinate";// for title of table in csv
+            var second = "Timestamp";// for title of table in csv
 
             var newLine = string.Format("{0},{1}", first, second);
             csv.AppendLine(newLine);
@@ -168,19 +186,15 @@ namespace EyeTracking
             }
             return fileName;
         }
-
-        private float RadianToDegree(float angle)
-        {
-            return angle * (180.0f / MathF.PI);
-        }
-
+        /// <summary>
+        /// Generates saccade point within the range of minimum fixation pixels and maximum fixation pixels
+        /// </summary>
         private void GenerateFixationPoint()
         {
             if(currentDataIndex == 0)
             {
                 dataPoints[currentDataIndex] = new DataPoint(0,0, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
-
+                //Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
             }
             else
             {
@@ -189,41 +203,42 @@ namespace EyeTracking
                 var ranY = GetRandomNumberFloat(minFixationPix, maxFixationPix);
                 var xcord = prevPoint.XCord + (float)ranX;
                 var ycord = prevPoint.YCord + (float)ranY;
-                if(xcord >= resX)
+                if(xcord >= resX)// checking if randomly generated X and Y coordinates are in the screen or not.
                 {
-                    xcord = 0;
+                    ranX = 0;
                 }
                 if (ycord >= resY)
                 {
-                    ycord = 0;
+                    ranY = 0;
                 }
 
                 dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                Console.Write("xcord: "+ dataPoints[currentDataIndex].XCord+"  "+ "ycord: " + dataPoints[currentDataIndex].YCord+"  "+ "Time: "+ dataPoints[currentDataIndex].TimeStamp + "\n");
+                //Console.Write("xcord: "+ dataPoints[currentDataIndex].XCord+"  "+ "ycord: " + dataPoints[currentDataIndex].YCord+"  "+ "Time: "+ dataPoints[currentDataIndex].TimeStamp + "\n");
             }
         }
-
+        /// <summary>
+        /// Generates saccade point within the range of minimum saccade angle and maximum saccade angle
+        /// </summary>
         private void GenerateSaccadePoint()
         {
             if (currentDataIndex == 0)
             {
                 dataPoints[currentDataIndex] = new DataPoint(0, 0, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
-
+                //Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
             }
             else
             {
                 DataPoint prevPoint = dataPoints[currentDataIndex - 1];
 
-                float minSaccadePix = ((1 / degPerPixel) * saccadeMin) / totalDataPoints;
-                float maxSaccadePix = ((1 / degPerPixel) * saccadeMax) / totalDataPoints;
+                float minSaccadePix = ((1 / degPerPixel) * saccadeMin) / totalDataPoints;// converion of degree to pixels
+                float maxSaccadePix = ((1 / degPerPixel) * saccadeMax) / totalDataPoints;// converion of degree to pixels
 
                 var ranX = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
                 var ranY = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
 
                 var xcord = prevPoint.XCord + (float)ranX;
                 var ycord = prevPoint.YCord + (float)ranY;
-                if (xcord >= resX)
+                if (xcord >= resX)// checking if randomly generated X and Y coordinates are in the screen or not.
                 {
                     ranX = 0;
                 }
@@ -232,10 +247,14 @@ namespace EyeTracking
                     ranY = 0;
                 }
                 dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp+"\n");
+                //Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp+"\n");
             }
         }
-
+        /// <summary>
+        /// switches state on the basis of min max fixation times and min max saccade time 
+        /// during fixation state(slow) it wil stay in that state until maximum fixation is not reached. After the maximum fixation 
+        /// value is achieved state machine switches to saccade(fast), it will stay in that state with 50% chance on every step.
+        /// </summary>
         private void SwitchState()
         {
             if(ContinousFixationTime > fixationMax)
@@ -247,10 +266,10 @@ namespace EyeTracking
             {
                 currentState = GazeMovementState.slow;
             }
-            else if(ContinousSaccadeTime > 0 && ContinousSaccadeTime < 90)
+            else if(ContinousSaccadeTime > 0 && ContinousSaccadeTime < 90)// limiting time of saccade between greater than 0 ms and less than 90 ms
             {
                 float r = GetRandomNumber(0,100);
-                if(r < 50)
+                if(r < 50)// 50% chance that saccade keep on happening
                 {
                     currentState = GazeMovementState.fast;
                     ContinousFixationTime = 0;
@@ -265,23 +284,25 @@ namespace EyeTracking
          
         }
 
-       
-
-
         /// <summary>
-        /// Util Funtions
+        /// Util Funtions (Random number generators and conversion functions)
         /// </summary>
         private static readonly Random getrandom = new Random();
+        // gives random integer between range
         public static int GetRandomNumber(int min, int max)
         {
             return getrandom.Next(min, max);
         }
-        public double GetRandomNumberFloat(double minimum, double maximum)
+        // gives random float between range
+        private static double GetRandomNumberFloat(double minimum, double maximum)
         {
             return getrandom.NextDouble() * (maximum - minimum) + minimum;
         }
 
-
+        // converts radian to degree
+        private float RadianToDegree(float angle)
+        {
+            return angle * (180.0f / MathF.PI);
+        }
     }
-
 }
