@@ -229,20 +229,25 @@ namespace EyeTracking
                 float minSaccadePix = ((1 / degPerPixel) * saccadeMin) / totalDataPoints;// converion of degree to pixels
                 float maxSaccadePix = ((1 / degPerPixel) * saccadeMax) / totalDataPoints;// converion of degree to pixels
 
-                var ranX = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
-                var ranY = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
-
-                var xcord = prevPoint.xCord + (float)ranX;
-                var ycord = prevPoint.yCord + (float)ranY;
-                if (xcord >= resX)// checking if randomly generated X and Y coordinates are in the screen or not.
+                var ranX = GetRandomNumber(5, 1020);
+                var ranY = GetRandomNumber(5, 760);
+                var dis = GetDistance(ranX,ranY,prevPoint.xCord,prevPoint.yCord);
+                while (dis < minSaccadePix && dis > maxSaccadePix)
                 {
-                    ranX = 0;
+                    ranX = GetRandomNumber(5, 1020);
+                    ranY = GetRandomNumber(5, 760);
                 }
-                if (ycord >= resY)
-                {
-                    ranY = 0;
-                }
-                dataPoints[currentDataIndex] = new DataPoint(prevPoint.xCord + (float)ranX, prevPoint.yCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
+                //var xcord = prevPoint.xCord + (float)ranX;
+                //var ycord = prevPoint.yCord + (float)ranY;
+                //if (xcord >= resX)// checking if randomly generated X and Y coordinates are in the screen or not.
+                //{
+                //    ranX = 0;
+                //}
+                //if (ycord >= resY)
+                //{
+                //    ranY = 0;
+                //}
+                dataPoints[currentDataIndex] = new DataPoint(ranX, ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
                 Console.Write("xcord: " + dataPoints[currentDataIndex].xCord + "  " + "ycord: " + dataPoints[currentDataIndex].yCord + "  " + "Time: " + dataPoints[currentDataIndex].timeStamp+"\n");
             }
         }
@@ -299,6 +304,11 @@ namespace EyeTracking
         private float RadianToDegree(float angle)
         {
             return angle * (180.0f / (float)Math.PI);
+        }
+
+        private float GetDistance(double x1, double y1, double x2, double y2)
+        {
+            return (float)Math.Sqrt(((x1 - x2) * (x1 - x2))+ ((y1 - y2) * (y1 - y2)));
         }
     }
 }
