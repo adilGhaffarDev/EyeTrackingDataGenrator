@@ -36,9 +36,9 @@ namespace EyeTracking
     /// </summary>
     class DataPoint
     {
-        float xCord;
-        float yCord;
-        string timeStamp;
+        public float xCord;
+        public float yCord;
+        public string timeStamp;
 
         public DataPoint(float xCord, float yCord, string timeStamp)
         {
@@ -46,10 +46,6 @@ namespace EyeTracking
             this.yCord = yCord;
             this.timeStamp = timeStamp;
         }
-
-        public float XCord { get => xCord; set => xCord = value; }
-        public float YCord { get => yCord; set => yCord = value; }
-        public string TimeStamp { get => timeStamp; set => timeStamp = value; }
 
         // returns the formatted string of cordinates to show in csv file
         public string getCordinatesInStringFormat()
@@ -125,7 +121,7 @@ namespace EyeTracking
             this.distPartcipantScreen = distPartcipantScreen;
             this.disaplaySize = disaplaySize;
 
-            degPerPixel = RadianToDegree(MathF.Atan2(0.5f * disaplaySize, distPartcipantScreen)) / (0.5f * resY);// degree per pixel calculation
+            degPerPixel = RadianToDegree((float)Math.Atan2(0.5f * disaplaySize, distPartcipantScreen)) / (0.5f * resY);// degree per pixel calculation
             currentState = GazeMovementState.none;
             ContinousFixationTime = 0;
             ContinousSaccadeTime = 0;
@@ -178,7 +174,7 @@ namespace EyeTracking
             foreach (DataPoint d in dataPoints)
             {
                 first = d.getCordinatesInStringFormat();
-                second = d.TimeStamp;
+                second = d.timeStamp;
 
                 newLine = string.Format("{0},{1}", first, second);
                 csv.AppendLine(newLine);
@@ -194,15 +190,15 @@ namespace EyeTracking
             if(currentDataIndex == 0)
             {
                 dataPoints[currentDataIndex] = new DataPoint(0,0, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                //Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
+                Console.Write("xcord: " + dataPoints[currentDataIndex].xCord + "  " + "ycord: " + dataPoints[currentDataIndex].yCord + "  " + "Time: " + dataPoints[currentDataIndex].timeStamp + "\n");
             }
             else
             {
                 DataPoint prevPoint = dataPoints[currentDataIndex-1];
                 var ranX = GetRandomNumberFloat(minFixationPix,maxFixationPix);
                 var ranY = GetRandomNumberFloat(minFixationPix, maxFixationPix);
-                var xcord = prevPoint.XCord + (float)ranX;
-                var ycord = prevPoint.YCord + (float)ranY;
+                var xcord = prevPoint.yCord + (float)ranX;
+                var ycord = prevPoint.yCord + (float)ranY;
                 if(xcord >= resX)// checking if randomly generated X and Y coordinates are in the screen or not.
                 {
                     ranX = 0;
@@ -212,8 +208,8 @@ namespace EyeTracking
                     ranY = 0;
                 }
 
-                dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                //Console.Write("xcord: "+ dataPoints[currentDataIndex].XCord+"  "+ "ycord: " + dataPoints[currentDataIndex].YCord+"  "+ "Time: "+ dataPoints[currentDataIndex].TimeStamp + "\n");
+                dataPoints[currentDataIndex] = new DataPoint(prevPoint.xCord + (float)ranX, prevPoint.yCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
+                Console.Write("xcord: "+ dataPoints[currentDataIndex].xCord+"  "+ "ycord: " + dataPoints[currentDataIndex].yCord+"  "+ "Time: "+ dataPoints[currentDataIndex].timeStamp + "\n");
             }
         }
         /// <summary>
@@ -224,7 +220,7 @@ namespace EyeTracking
             if (currentDataIndex == 0)
             {
                 dataPoints[currentDataIndex] = new DataPoint(0, 0, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                //Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp + "\n");
+                Console.Write("xcord: " + dataPoints[currentDataIndex].xCord + "  " + "ycord: " + dataPoints[currentDataIndex].yCord + "  " + "Time: " + dataPoints[currentDataIndex].timeStamp + "\n");
             }
             else
             {
@@ -236,8 +232,8 @@ namespace EyeTracking
                 var ranX = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
                 var ranY = GetRandomNumberFloat(minSaccadePix, maxSaccadePix);
 
-                var xcord = prevPoint.XCord + (float)ranX;
-                var ycord = prevPoint.YCord + (float)ranY;
+                var xcord = prevPoint.xCord + (float)ranX;
+                var ycord = prevPoint.yCord + (float)ranY;
                 if (xcord >= resX)// checking if randomly generated X and Y coordinates are in the screen or not.
                 {
                     ranX = 0;
@@ -246,8 +242,8 @@ namespace EyeTracking
                 {
                     ranY = 0;
                 }
-                dataPoints[currentDataIndex] = new DataPoint(prevPoint.XCord + (float)ranX, prevPoint.XCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
-                //Console.Write("xcord: " + dataPoints[currentDataIndex].XCord + "  " + "ycord: " + dataPoints[currentDataIndex].YCord + "  " + "Time: " + dataPoints[currentDataIndex].TimeStamp+"\n");
+                dataPoints[currentDataIndex] = new DataPoint(prevPoint.xCord + (float)ranX, prevPoint.yCord + (float)ranY, stopWatch.Elapsed.TotalMilliseconds.ToString());
+                Console.Write("xcord: " + dataPoints[currentDataIndex].xCord + "  " + "ycord: " + dataPoints[currentDataIndex].yCord + "  " + "Time: " + dataPoints[currentDataIndex].timeStamp+"\n");
             }
         }
         /// <summary>
@@ -302,7 +298,7 @@ namespace EyeTracking
         // converts radian to degree
         private float RadianToDegree(float angle)
         {
-            return angle * (180.0f / MathF.PI);
+            return angle * (180.0f / (float)Math.PI);
         }
     }
 }
